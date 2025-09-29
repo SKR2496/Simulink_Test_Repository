@@ -2,14 +2,13 @@ pipeline {
     agent any
 
     triggers {
-        // Poll SCM every 5 minutes
-        pollSCM('H/5 * * * *')
+        // Poll SCM every 10 minutes
+        pollSCM('H/10 * * * *')
     }
 
     stages {
         stage('Checkout') {
             steps {
-                // Pull latest code from GitHub
                 git branch: 'main',
                     url: 'https://github.com/SKR2496/Simulink_Test_Repository.git'
             }
@@ -21,7 +20,8 @@ pipeline {
                     echo Detecting changed .slx files...
                     git fetch --all
                     git diff --name-only HEAD~1 HEAD > changed_files.txt
-                    findstr ".slx" changed_files.txt > changed_models.txt || echo No models changed > changed_models.txt
+                    findstr ".slx" changed_files.txt > changed_models.txt || echo NoModels > changed_models.txt
+                    type changed_models.txt
                 '''
             }
         }
@@ -29,13 +29,14 @@ pipeline {
         stage('Run MIL Tests') {
             when {
                 expression {
-                    return fileExists('changed_models.txt') && 
-                           readFile('changed_models.txt').trim() != "No models changed"
+                    // Run only if .slx models were found
+                    def changed = readFile('changed_models.txt').trim()
+                    return changed && changed != "NoModels"
                 }
             }
             steps {
                 bat '''
-                    echo Running MATLAB MIL tests...
+                    echo Running MATLAB MIL tests on changed models...
                     "C:\\Program Files\\MATLAB\\R2023b\\bin\\matlab.exe" -batch "run('runMilTests.m')"
                 '''
             }
@@ -44,10 +45,10 @@ pipeline {
 
     post {
         success {
-            echo "MIL tests PASSED ✅"
+            echo "✅ Pipeline completed successfully"
         }
         failure {
-            echo "MIL tests FAILED ❌"
+            echo "❌ Pipeline failed"
         }
     }
 }
