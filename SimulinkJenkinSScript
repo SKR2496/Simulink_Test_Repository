@@ -3,7 +3,7 @@ pipeline {
 
     triggers {
         // Poll SCM every 5 minutes
-        pollSCM('H/3 * * * *')
+        pollSCM('H/5 * * * *')
     }
 
     stages {
@@ -17,31 +17,27 @@ pipeline {
 
         stage('Detect Changed Model') {
             steps {
-                script {
-                    // Find changed .slx files in the last commit
-                    def changedModels = sh(
-                        script: "git diff --name-only HEAD~1 HEAD | grep '.slx' || true",
-                        returnStdout: true
-                    ).trim()
-
-                    if (changedModels) {
-                        echo "Modified model(s): ${changedModels}"
-                        env.MODEL_FILE = changedModels
-                    } else {
-                        error "No .slx files changed."
-                    }
-                }
+                bat '''
+                    echo Detecting changed .slx files...
+                    git fetch --all
+                    git diff --name-only HEAD~1 HEAD > changed_files.txt
+                    findstr ".slx" changed_files.txt > changed_models.txt || echo No models changed > changed_models.txt
+                '''
             }
         }
 
         stage('Run MIL Tests') {
-            steps {
-                script {
-                    // Run MATLAB batch script on the detected model
-                    bat """
-                    "C:\\Program Files\\MATLAB\\R2023b\\bin\\matlab.exe" -batch "runMILTests('${env.MODEL_FILE}')"
-                    """
+            when {
+                expression {
+                    return fileExists('changed_models.txt') && 
+                           readFile('changed_models.txt').trim() != "No models changed"
                 }
+            }
+            steps {
+                bat '''
+                    echo Running MATLAB MIL tests...
+                    "C:\\Program Files\\MATLAB\\R2023b\\bin\\matlab.exe" -batch "run('runMilTests.m')"
+                '''
             }
         }
     }
@@ -55,4 +51,3 @@ pipeline {
         }
     }
 }
-
