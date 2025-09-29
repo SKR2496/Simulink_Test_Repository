@@ -1,21 +1,58 @@
 pipeline {
     agent any
 
+    triggers {
+        // Poll SCM every 5 minutes
+        pollSCM('H/3 * * * *')
+    }
+
     stages {
-        stage('Build') {
+        stage('Checkout') {
             steps {
-                echo 'Building sample pipeline application'
+                // Pull latest code from GitHub
+                git branch: 'main',
+                    url: 'https://github.com/SKR2496/Simulink_Test_Repository.git'
             }
         }
-        stage('test'){
+
+        stage('Detect Changed Model') {
             steps {
-                echo 'testing is in progress'
+                script {
+                    // Find changed .slx files in the last commit
+                    def changedModels = sh(
+                        script: "git diff --name-only HEAD~1 HEAD | grep '.slx' || true",
+                        returnStdout: true
+                    ).trim()
+
+                    if (changedModels) {
+                        echo "Modified model(s): ${changedModels}"
+                        env.MODEL_FILE = changedModels
+                    } else {
+                        error "No .slx files changed."
+                    }
+                }
             }
         }
-        stage('deploy'){
+
+        stage('Run MIL Tests') {
             steps {
-                echo 'deploying the code'
+                script {
+                    // Run MATLAB batch script on the detected model
+                    bat """
+                    "C:\\Program Files\\MATLAB\\R2023b\\bin\\matlab.exe" -batch "runMILTests('${env.MODEL_FILE}')"
+                    """
+                }
             }
         }
     }
+
+    post {
+        success {
+            echo "MIL tests PASSED ✅"
+        }
+        failure {
+            echo "MIL tests FAILED ❌"
+        }
+    }
 }
+
