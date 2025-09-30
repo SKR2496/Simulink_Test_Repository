@@ -35,12 +35,11 @@ pipeline {
                 }
             }
             steps {
-                bat """
+                bat '''
                     echo Running MATLAB MIL tests on changed models...
 
-                    runas /user:sasi.kakarla_methodi /savecred "C:\\Program Files\\MATLAB\\R2025a\\bin\\matlab.exe" -batch \"run('runMilTests.m')\"
-
-                  """
+                   "C:\\Program Files\\MATLAB\\R2025a\\bin\\matlab.exe" -batch "run('runMilTests.m')"
+                '''
                   
                 
             }
