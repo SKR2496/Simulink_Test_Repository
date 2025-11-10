@@ -42,3 +42,4 @@ function runMilTests(modelFile)
     % Close the model
     close_system(modelFile, 0);
 end
+
