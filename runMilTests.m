@@ -1,3 +1,4 @@
+
 function runMilTests(modelFile)
     disp(['Running MIL tests for model: ', modelFile]);
 
@@ -33,7 +34,8 @@ function runMilTests(modelFile)
            'IncludeSimulationSignalPlots', true, ...
            'IncludeTestResults',int32(0),...
            'IncludeComparisonSignalPlots', true,...
-           'LaunchReport',true);
+           'LaunchReport',true,...
+           'IncludeCoverageResult',true);
         end
     else
         warning(['No test file found for model ' modelFile '. Skipping MIL tests.']);
@@ -42,4 +44,3 @@ function runMilTests(modelFile)
     % Close the model
     close_system(modelFile, 0);
 end
-
